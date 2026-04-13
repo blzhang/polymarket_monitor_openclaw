@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+
+# State files
+poll_state.json
+alert_outbox.json
+summary_outbox.json
+price_cache.json
+*.pid
+
+# Logs
+*.log
+
+# OpenClaw internal
+.openclaw/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store

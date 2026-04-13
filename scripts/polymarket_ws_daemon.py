@@ -1,0 +1,438 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+from __future__ import annotations
+
+import asyncio
+import json
+import os
+import time
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any
+
+import requests
+import websockets
+
+WS_URL = "wss://ws-subscriptions-clob.polymarket.com/ws/market"
+HTTP_EVENT_API = "https://gamma-api.polymarket.com/events?slug={slug}"
+WORKSPACE = Path("/Users/zhangbeilong/.openclaw/workspace-polymarket-monitor")
+WATCHLIST_FILE = WORKSPACE / "watchlist.json"
+STATE_FILE = WORKSPACE / "poll_state.json"
+ALERT_OUTBOX = WORKSPACE / "alert_outbox.json"
+SUMMARY_OUTBOX = WORKSPACE / "summary_outbox.json"
+PID_FILE = WORKSPACE / "monitor.pid"
+LOG_FILE = WORKSPACE / "monitor.log"
+
+RELATIVE_THRESHOLD = 0.10
+ABSOLUTE_THRESHOLD = 0.05
+MIN_VOLUME_DELTA = 100000.0
+DEDUP_SECONDS = 60
+WINDOW_SECONDS = 300
+MAX_HISTORY_HOURS = 30
+REBUILD_WATCHLIST_SECONDS = 300
+
+
+def now_local() -> datetime:
+    return datetime.now(timezone.utc).astimezone()
+
+
+def as_float(value: Any, default: float = 0.0) -> float:
+    try:
+        if value is None or value == "":
+            return default
+        return float(value)
+    except Exception:
+        return default
+
+
+def load_json(path: Path, default: Any) -> Any:
+    if not path.exists():
+        return default
+    try:
+        return json.loads(path.read_text())
+    except Exception:
+        return default
+
+
+def save_json(path: Path, data: Any) -> None:
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True))
+
+
+def append_log(message: str) -> None:
+    line = f"[{now_local().strftime('%Y-%m-%d %H:%M:%S')}] {message}\n"
+    with LOG_FILE.open("a") as f:
+        f.write(line)
+
+
+def load_watchlist() -> list[dict[str, Any]]:
+    raw = load_json(WATCHLIST_FILE, {"markets": []})
+    items = raw.get("markets", []) if isinstance(raw, dict) else []
+    out = []
+    now = now_local()
+    for item in items:
+        if not item.get("enabled", True):
+            continue
+        expires_at = item.get("expiresAt")
+        if expires_at:
+            try:
+                expiry = datetime.fromisoformat(expires_at.replace("Z", "+00:00")).astimezone()
+                if expiry < now:
+                    continue
+            except Exception:
+                pass
+        out.append(item)
+    return out
+
+
+def zh_label_for_market(question: str, slug: str) -> str:
+    q = (question or '').strip()
+    if q == 'Strait of Hormuz traffic returns to normal by end of April?':
+        return '霍尔木兹海峡航运是否在4月底前恢复正常'
+    if q == 'Strait of Hormuz traffic returns to normal by end of May?':
+        return '霍尔木兹海峡航运是否在5月底前恢复正常'
+    if q.startswith('Iran x Israel/US conflict ends by '):
+        date_part = q.removeprefix('Iran x Israel/US conflict ends by ').rstrip('?')
+        return f'伊朗 x 以色列/美国冲突是否在{date_part}前结束'
+    return q or slug
+
+
+def fetch_markets_for_slug(slug: str) -> list[dict[str, Any]]:
+    r = requests.get(HTTP_EVENT_API.format(slug=slug), timeout=10)
+    r.raise_for_status()
+    raw = r.json()
+    events = raw if isinstance(raw, list) else [raw]
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    out = []
+    for event in events:
+        title = event.get("title") or slug
+        for m in event.get("markets", []):
+            if not m.get("active") or m.get("closed"):
+                continue
+            end = m.get("endDate")
+            if end:
+                try:
+                    dt = datetime.fromisoformat(end.replace("Z", "+00:00")).replace(tzinfo=None)
+                    if dt < now:
+                        continue
+                except Exception:
+                    pass
+            token_ids = []
+            raw_token_ids = m.get("clobTokenIds")
+            if isinstance(raw_token_ids, str):
+                try:
+                    token_ids = json.loads(raw_token_ids)
+                except Exception:
+                    token_ids = []
+            elif isinstance(raw_token_ids, list):
+                token_ids = raw_token_ids
+            market_title = m.get("question") or m.get("title") or title
+            out.append({
+                "market_id": str(m.get("id") or m.get("conditionId") or ""),
+                "slug": slug,
+                "label": zh_label_for_market(market_title, slug),
+                "market_title": market_title,
+                "url": f'https://polymarket.com/zh/event/{m.get("slug") or slug}',
+                "token_ids": [str(x) for x in token_ids],
+                "yes_token_id": str(token_ids[0]) if len(token_ids) >= 1 else None,
+                "no_token_id": str(token_ids[1]) if len(token_ids) >= 2 else None,
+            })
+    return [x for x in out if x["market_id"]]
+
+
+class Monitor:
+    def __init__(self) -> None:
+        self.state = load_json(STATE_FILE, {"markets": {}, "last_watchlist_refresh": None})
+        self.market_map: dict[str, dict[str, Any]] = {}
+        self.dedup: dict[str, dict[str, float]] = defaultdict(dict)
+        self.last_refresh = 0.0
+
+    def save_state(self) -> None:
+        save_json(STATE_FILE, self.state)
+
+    def ensure_market_state(self, market_id: str, meta: dict[str, Any]) -> dict[str, Any]:
+        markets = self.state.setdefault("markets", {})
+        item = markets.setdefault(market_id, {
+            "history": [],
+            "label": meta.get("label"),
+            "market_title": meta.get("market_title"),
+            "slug": meta.get("slug"),
+            "url": meta.get("url"),
+            "yes_token_id": meta.get("yes_token_id"),
+            "no_token_id": meta.get("no_token_id"),
+            "last_yes_price": None,
+            "last_no_price": None,
+            "display_yes_price": None,
+            "display_no_price": None,
+            "last_trade_yes_price": None,
+            "last_trade_no_price": None,
+        })
+        item["label"] = meta.get("label") or item.get("label")
+        item["market_title"] = meta.get("market_title") or item.get("market_title")
+        item["slug"] = meta.get("slug") or item.get("slug")
+        item["url"] = meta.get("url") or item.get("url")
+        item["yes_token_id"] = meta.get("yes_token_id") or item.get("yes_token_id")
+        item["no_token_id"] = meta.get("no_token_id") or item.get("no_token_id")
+        return item
+
+    def prune_history(self, history: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        cutoff = now_local() - timedelta(hours=MAX_HISTORY_HOURS)
+        out = []
+        for x in history:
+            try:
+                ts = datetime.fromisoformat(x["ts"].replace("Z", "+00:00")).astimezone()
+                if ts >= cutoff:
+                    out.append(x)
+            except Exception:
+                continue
+        return out
+
+    def get_baseline(self, history: list[dict[str, Any]], seconds_back: int) -> dict[str, Any] | None:
+        if not history:
+            return None
+        target = now_local() - timedelta(seconds=seconds_back)
+        chosen = None
+        for item in history:
+            try:
+                ts = datetime.fromisoformat(item["ts"].replace("Z", "+00:00")).astimezone()
+            except Exception:
+                continue
+            if ts <= target:
+                chosen = item
+        return chosen or history[0]
+
+    def can_alert(self, market_id: str, kind: str) -> bool:
+        # 去重按 market_id 统一去，不按方向；避免价格小幅波动导致连发
+        last = self.dedup.get(market_id, 0)
+        return time.time() - last >= DEDUP_SECONDS
+
+    def mark_alert(self, market_id: str, kind: str) -> None:
+        self.dedup[market_id] = time.time()
+
+    def queue_alert(self, text: str) -> None:
+        outbox = load_json(ALERT_OUTBOX, {"messages": []})
+        outbox.setdefault("messages", []).append({"text": text, "ts": now_local().isoformat()})
+        save_json(ALERT_OUTBOX, outbox)
+
+    def refresh_watchlist(self) -> bool:
+        if time.time() - self.last_refresh < REBUILD_WATCHLIST_SECONDS:
+            return False
+        self.last_refresh = time.time()
+        market_map = {}
+        for item in load_watchlist():
+            slug = item["event_id"]
+            label = item.get("label") or slug
+            try:
+                markets = fetch_markets_for_slug(slug)
+                for m in markets:
+                    m["label"] = label
+                    token_ids = m.get("token_ids", [])
+                    for token_id in token_ids:
+                        market_map[str(token_id)] = {**m, "token_id": str(token_id)}
+            except Exception as e:
+                append_log(f"watchlist refresh failed for {slug}: {e}")
+        changed = set(self.market_map.keys()) != set(market_map.keys())
+        self.market_map = market_map
+        self.state["last_watchlist_refresh"] = now_local().isoformat()
+        self.save_state()
+        append_log(f"watchlist refreshed, active markets={len(self.market_map)}")
+        return changed
+
+    def process_trade(self, token_id: str, price: float, volume_delta: float) -> None:
+        meta = self.market_map.get(token_id)
+        if not meta:
+            return
+        market_id = str(meta.get("market_id") or token_id)
+        item = self.ensure_market_state(market_id, meta)
+        yes_token_id = str(item.get("yes_token_id") or "")
+        no_token_id = str(item.get("no_token_id") or "")
+
+        display_yes = item.get("display_yes_price")
+        display_no = item.get("display_no_price")
+        if display_yes is None or display_no is None:
+            display_yes = item.get("last_yes_price")
+            display_no = item.get("last_no_price")
+
+        if str(token_id) == yes_token_id:
+            trigger_yes_price = price
+            trigger_no_price = max(0.0, 1.0 - price)
+            item["last_trade_yes_price"] = trigger_yes_price
+            item["last_trade_no_price"] = trigger_no_price
+        elif str(token_id) == no_token_id:
+            trigger_no_price = price
+            trigger_yes_price = max(0.0, 1.0 - price)
+            item["last_trade_no_price"] = trigger_no_price
+            item["last_trade_yes_price"] = trigger_yes_price
+        else:
+            return
+        if trigger_yes_price <= 0:
+            return
+
+        # WS size 字段不是单笔 USD 成交，而是累计量或放大值；这里只记价格，成交量改用 HTTP snapshot 差分
+        history = self.prune_history(item.get("history", []))
+        history.append({
+            "ts": now_local().isoformat(),
+            "price": trigger_yes_price,
+            "volume_delta": 0.0,  # 占位，实际成交量由 snapshot refresher 填充
+        })
+        item["history"] = history
+        item["updated_at"] = now_local().isoformat()
+
+        baseline = self.get_baseline(history, WINDOW_SECONDS)
+        if baseline:
+            base_price = as_float(baseline.get("price"), trigger_yes_price)
+            abs_change = trigger_yes_price - base_price
+            rel_change = 0.0 if base_price == 0 else abs_change / base_price
+            # 成交量改用 snapshot volume24hr 差分，不依赖 history 累加
+            window_volume = item.get("volume_delta_5m", 0.0)
+            if (abs(rel_change) >= RELATIVE_THRESHOLD or abs(abs_change) >= ABSOLUTE_THRESHOLD) and window_volume >= MIN_VOLUME_DELTA:
+                kind = "up" if abs_change > 0 else "down" if abs_change < 0 else "flat"
+                if self.can_alert(market_id, kind):
+                    label = item.get("label") or item.get("market_title") or market_id
+                    show_yes = as_float(display_yes, trigger_yes_price)
+                    show_no = as_float(display_no, max(0.0, 1.0 - show_yes))
+                    msg = "\n".join([
+                        f"💰 Polymarket 成交异动: {label}",
+                        f"事件：{label}",
+                        f"YES：{show_yes:.2%}",
+                        f"NO：{show_no:.2%}",
+                        f"最新成交价（YES）：{trigger_yes_price:.2%}",
+                        f"近5分钟相对变化：{rel_change:+.2%}",
+                        f"近5分钟绝对变化：{abs_change:+.4f}",
+                        f"近5分钟新增成交额：${window_volume:,.0f}",
+                        f"时间：{now_local().strftime('%Y-%m-%d %H:%M:%S')}",
+                        f"链接：{item.get('url') or f'https://polymarket.com/zh/event/{item.get('slug')}' }",
+                    ])
+                    self.queue_alert(msg)
+                    self.mark_alert(market_id, kind)
+                    append_log(f"alert queued for {market_id}")
+        self.save_state()
+
+    async def snapshot_refresher(self) -> None:
+        while True:
+            try:
+                seen = set()
+                for meta in list(self.market_map.values()):
+                    market_id = str(meta.get("market_id") or "")
+                    if not market_id or market_id in seen:
+                        continue
+                    seen.add(market_id)
+                    item = self.ensure_market_state(market_id, meta)
+                    try:
+                        r = requests.get(HTTP_EVENT_API.format(slug=meta.get("slug")), timeout=10)
+                        r.raise_for_status()
+                        raw = r.json()
+                        events = raw if isinstance(raw, list) else [raw]
+                        for ev in events:
+                            for mm in ev.get("markets", []):
+                                if str(mm.get("id")) != market_id:
+                                    continue
+                                op = mm.get("outcomePrices")
+                                if isinstance(op, str):
+                                    op = json.loads(op)
+                                if isinstance(op, list) and len(op) >= 2:
+                                    new_display_yes = as_float(op[0], 0.0)
+                                    new_display_no = as_float(op[1], 0.0)
+                                    new_volume24 = as_float(mm.get("volume24hr") or mm.get("volume24hrClob"), 0.0)
+                                    item["display_yes_price"] = new_display_yes
+                                    item["display_no_price"] = new_display_no
+                                    item["last_yes_price"] = new_display_yes
+                                    item["last_no_price"] = new_display_no
+                                    # volume24hr 快照队列，用于计算 5 分钟差分
+                                    vol_snapshots = item.setdefault("volume_snapshots", [])
+                                    vol_snapshots.append({"ts": now_local().isoformat(), "volume24hr": new_volume24})
+                                    # 保留最近 10 分钟快照
+                                    cutoff = now_local() - timedelta(minutes=10)
+                                    vol_snapshots[:] = [x for x in vol_snapshots if datetime.fromisoformat(x["ts"].replace("Z", "+00:00")).astimezone() >= cutoff]
+                                    # 计算 5 分钟成交量差分
+                                    target = now_local() - timedelta(seconds=WINDOW_SECONDS)
+                                    base_vol = new_volume24
+                                    for snap in vol_snapshots:
+                                        ts = datetime.fromisoformat(snap["ts"].replace("Z", "+00:00")).astimezone()
+                                        if ts <= target:
+                                            base_vol = snap["volume24hr"]
+                                            break
+                                    item["volume_delta_5m"] = max(0.0, new_volume24 - base_vol)
+                                    item["last_volume24hr"] = new_volume24
+                                break
+                    except Exception as e:
+                        append_log(f"snapshot refresh failed for {market_id}: {e}")
+                        # snapshot 失败时，用最近 WS 价格作为 display fallback，避免展示价过旧
+                        last_trade = item.get("last_trade_yes_price")
+                        if last_trade and item.get("display_yes_price") is None:
+                            item["display_yes_price"] = last_trade
+                            item["display_no_price"] = max(0.0, 1.0 - last_trade)
+                self.save_state()
+            except Exception as e:
+                append_log(f"snapshot refresher error: {e}")
+            await asyncio.sleep(30)
+
+    async def run(self) -> None:
+        self.refresh_watchlist()
+        asyncio.create_task(self.snapshot_refresher())
+        while True:
+            try:
+                if not self.market_map:
+                    self.refresh_watchlist()
+                    await asyncio.sleep(5)
+                    continue
+                subscribed_ids = tuple(sorted(self.market_map.keys()))
+                async with websockets.connect(WS_URL, ping_interval=20, ping_timeout=20, proxy=None) as ws:
+                    sub = {
+                        "assets_ids": list(subscribed_ids),
+                        "type": "market",
+                        "custom_feature_enabled": True,
+                    }
+                    await ws.send(json.dumps(sub))
+                    append_log(f"ws subscribed markets={len(subscribed_ids)}")
+                    while True:
+                        watchlist_changed = self.refresh_watchlist()
+                        if watchlist_changed:
+                            append_log("watchlist changed, reconnecting ws")
+                            break
+                        raw = await ws.recv()
+                        try:
+                            data = json.loads(raw)
+                        except Exception:
+                            continue
+
+                        items = data if isinstance(data, list) else [data]
+                        for item_data in items:
+                            if not isinstance(item_data, dict):
+                                continue
+                            event_type = item_data.get("event_type")
+                            if event_type == "price_change" and isinstance(item_data.get("price_changes"), list):
+                                for change in item_data.get("price_changes", []):
+                                    market_id = str(change.get("asset_id") or "")
+                                    if not market_id:
+                                        continue
+                                    price = as_float(change.get("price") or change.get("best_bid") or change.get("best_ask"), 0.0)
+                                    if price <= 0:
+                                        continue
+                                    volume_delta = as_float(change.get("size") or 0.0)
+                                    self.process_trade(market_id, price, volume_delta)
+                                continue
+
+                            market_id = str(item_data.get("asset_id") or item_data.get("marketId") or item_data.get("market_id") or "")
+                            if not market_id:
+                                continue
+                            price = as_float(item_data.get("price") or item_data.get("last_price") or item_data.get("lastTradePrice") or item_data.get("bestBid"), 0.0)
+                            if price <= 0:
+                                continue
+                            volume_delta = as_float(item_data.get("size") or item_data.get("volume") or item_data.get("amount"), 0.0)
+                            self.process_trade(market_id, price, volume_delta)
+            except Exception as e:
+                append_log(f"ws loop error: {e}")
+                await asyncio.sleep(5)
+
+
+def main() -> None:
+    PID_FILE.write_text(str(os.getpid()))
+    append_log("daemon started")
+    monitor = Monitor()
+    asyncio.run(monitor.run())
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,22 @@
+{
+  "markets": [
+    {
+      "event_id": "strait-of-hormuz-traffic-returns-to-normal-by-april-30",
+      "label": "霍尔木兹海峡航运是否在4月底前恢复正常",
+      "enabled": true,
+      "expiresAt": "2026-05-01T00:00:00+08:00"
+    },
+    {
+      "event_id": "strait-of-hormuz-traffic-returns-to-normal-by-end-of-may",
+      "label": "霍尔木兹海峡航运是否在5月底前恢复正常",
+      "enabled": true,
+      "expiresAt": "2026-06-01T00:00:00+08:00"
+    },
+    {
+      "event_id": "iran-x-israelus-conflict-ends-by",
+      "label": "Iran x Israel/US conflict ends by...",
+      "enabled": true,
+      "expiresAt": null
+    }
+  ]
+}
