@@ -94,10 +94,10 @@ def pop_alerts() -> str:
     outbox = load_json(ALERT_OUTBOX, {"messages": []})
     msgs = outbox.get("messages", []) if isinstance(outbox, dict) else []
     if not msgs:
-        return "NO_REPLY"
+        return ""
     text = "\n\n".join(m.get("text", "") for m in msgs if m.get("text"))
     save_json(ALERT_OUTBOX, {"messages": []})
-    return text or "NO_REPLY"
+    return text or ""
 
 
 def make_summary() -> str:
@@ -124,7 +124,7 @@ def make_summary() -> str:
             f"链接：{item.get('url') or ('https://polymarket.com/zh/event/' + str(item.get('slug') or ''))}",
         ])
         count += 1
-    return "\n".join(lines) if count else "NO_REPLY"
+    return "\n".join(lines) if count else ""
 
 
 if __name__ == "__main__":
