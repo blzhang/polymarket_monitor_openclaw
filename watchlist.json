@@ -17,6 +17,12 @@
       "label": "Iran x Israel/US conflict ends by...",
       "enabled": true,
       "expiresAt": null
+    },
+    {
+      "event_id": "us-x-iran-permanent-peace-deal-by",
+      "label": "美伊永久和平协议",
+      "enabled": true,
+      "expiresAt": "2026-07-01T00:00:00+08:00"
     }
   ]
 }
