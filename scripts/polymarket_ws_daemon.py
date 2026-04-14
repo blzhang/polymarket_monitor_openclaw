@@ -30,6 +30,14 @@ ABSOLUTE_THRESHOLD = 0.05
 MIN_VOLUME_DELTA = 100000.0
 DEDUP_SECONDS = 60
 WINDOW_SECONDS = 300
+SLOW_TREND_WINDOWS = [1800, 3600, 21600]
+SLOW_TREND_RULES = [
+    (1800, 0.05),
+    (3600, 0.10),
+    (21600, 0.20),
+]
+HIGH_PROB_THRESHOLD = 0.90
+HIGH_PROB_REARM_THRESHOLD = 0.85
 MAX_HISTORY_HOURS = 30
 REBUILD_WATCHLIST_SECONDS = 300
 
@@ -141,11 +149,19 @@ def fetch_markets_for_slug(slug: str) -> list[dict[str, Any]]:
     return [x for x in out if x["market_id"]]
 
 
+def window_label(seconds_back: int) -> str:
+    if seconds_back % 3600 == 0:
+        return f"{seconds_back // 3600}小时"
+    if seconds_back % 60 == 0:
+        return f"{seconds_back // 60}分钟"
+    return f"{seconds_back}秒"
+
+
 class Monitor:
     def __init__(self) -> None:
         self.state = load_json(STATE_FILE, {"markets": {}, "last_watchlist_refresh": None})
         self.market_map: dict[str, dict[str, Any]] = {}
-        self.dedup: dict[str, dict[str, float]] = defaultdict(dict)
+        self.dedup: dict[str, float] = {}
         self.last_refresh = 0.0
 
     def save_state(self) -> None:
@@ -167,6 +183,8 @@ class Monitor:
             "display_no_price": None,
             "last_trade_yes_price": None,
             "last_trade_no_price": None,
+            "trend_dedup": {},
+            "high_prob_alerted": False,
         })
         item["label"] = meta.get("label") or item.get("label")
         item["market_title"] = meta.get("market_title") or item.get("market_title")
@@ -214,6 +232,72 @@ class Monitor:
         outbox = load_json(ALERT_OUTBOX, {"messages": []})
         outbox.setdefault("messages", []).append({"text": text, "ts": now_local().isoformat()})
         save_json(ALERT_OUTBOX, outbox)
+
+    def check_slow_trend_alerts(self, market_id: str, item: dict[str, Any], trigger_yes_price: float, display_yes: Any, display_no: Any) -> None:
+        history = item.get("history", [])
+        if not history:
+            return
+        trend_dedup = item.setdefault("trend_dedup", {})
+        label = item.get("label") or item.get("market_title") or market_id
+        show_yes = as_float(display_yes, trigger_yes_price)
+        show_no = as_float(display_no, max(0.0, 1.0 - show_yes))
+        for seconds_back, threshold in SLOW_TREND_RULES:
+            baseline = self.get_baseline(history, seconds_back)
+            if not baseline:
+                continue
+            base_price = as_float(baseline.get("price"), trigger_yes_price)
+            if base_price <= 0:
+                continue
+            abs_change = trigger_yes_price - base_price
+            rel_change = abs_change / base_price
+            if abs(rel_change) < threshold:
+                continue
+            dedup_key = f"{seconds_back}:{'up' if rel_change > 0 else 'down'}"
+            last_ts = as_float(trend_dedup.get(dedup_key), 0.0)
+            if time.time() - last_ts < seconds_back:
+                continue
+            direction_emoji = "📈" if rel_change > 0 else "📉"
+            direction_text = "缓慢上行" if rel_change > 0 else "缓慢下行"
+            msg = "\n".join([
+                f"{direction_emoji} Polymarket {direction_text}: {label}",
+                f"事件：{label}",
+                f"YES：{show_yes:.2%}",
+                f"NO：{show_no:.2%}",
+                f"当前成交价（YES）：{trigger_yes_price:.2%}",
+                f"对比窗口：{window_label(seconds_back)}",
+                f"窗口起点价格：{base_price:.2%}",
+                f"窗口相对变化：{rel_change:+.2%}",
+                f"窗口绝对变化：{abs_change:+.2%}",
+                f"触发条件：{window_label(seconds_back)}累计变化达到 {rel_change:+.2%}",
+                f"时间：{now_local().strftime('%Y-%m-%d %H:%M:%S')}",
+                f"链接：{item.get('url') or ('https://polymarket.com/zh/event/' + str(item.get('slug') or ''))}",
+            ])
+            self.queue_alert(msg)
+            trend_dedup[dedup_key] = time.time()
+            append_log(f"slow trend alert queued for {market_id} window={seconds_back} rel={rel_change:+.4f}")
+
+    def check_high_probability_alert(self, market_id: str, item: dict[str, Any], trigger_yes_price: float, display_yes: Any, display_no: Any) -> None:
+        label = item.get("label") or item.get("market_title") or market_id
+        show_yes = as_float(display_yes, trigger_yes_price)
+        show_no = as_float(display_no, max(0.0, 1.0 - show_yes))
+        alerted = bool(item.get("high_prob_alerted", False))
+        if trigger_yes_price >= HIGH_PROB_THRESHOLD and not alerted:
+            msg = "\n".join([
+                f"🚨 Polymarket 高概率阈值: {label}",
+                f"事件：{label}",
+                f"YES：{show_yes:.2%}",
+                f"NO：{show_no:.2%}",
+                f"当前成交价（YES）：{trigger_yes_price:.2%}",
+                f"触发条件：YES 概率达到或超过 {HIGH_PROB_THRESHOLD:.0%}",
+                f"时间：{now_local().strftime('%Y-%m-%d %H:%M:%S')}",
+                f"链接：{item.get('url') or ('https://polymarket.com/zh/event/' + str(item.get('slug') or ''))}",
+            ])
+            self.queue_alert(msg)
+            item["high_prob_alerted"] = True
+            append_log(f"high probability alert queued for {market_id} price={trigger_yes_price:.4f}")
+        elif trigger_yes_price <= HIGH_PROB_REARM_THRESHOLD and alerted:
+            item["high_prob_alerted"] = False
+            append_log(f"high probability alert rearmed for {market_id} price={trigger_yes_price:.4f}")
 
     def refresh_watchlist(self) -> bool:
         if time.time() - self.last_refresh < REBUILD_WATCHLIST_SECONDS:
@@ -284,14 +368,23 @@ class Monitor:
             base_price = as_float(baseline.get("price"), trigger_yes_price)
             abs_change = trigger_yes_price - base_price
             rel_change = 0.0 if base_price == 0 else abs_change / base_price
-            # 成交量改用 snapshot volume24hr 差分，不依赖 history 累加
-            window_volume = item.get("volume_delta_5m", 0.0)
-            if (abs(rel_change) >= RELATIVE_THRESHOLD or abs(abs_change) >= ABSOLUTE_THRESHOLD) and window_volume >= MIN_VOLUME_DELTA:
+            window_volume = as_float(item.get("volume_delta_5m"), 0.0)
+            hit_relative = abs(rel_change) >= RELATIVE_THRESHOLD
+            hit_absolute = abs(abs_change) >= ABSOLUTE_THRESHOLD
+            hit_volume = window_volume >= MIN_VOLUME_DELTA
+            if hit_relative or hit_absolute or hit_volume:
                 kind = "up" if abs_change > 0 else "down" if abs_change < 0 else "flat"
                 if self.can_alert(market_id, kind):
                     label = item.get("label") or item.get("market_title") or market_id
                     show_yes = as_float(display_yes, trigger_yes_price)
                     show_no = as_float(display_no, max(0.0, 1.0 - show_yes))
+                    reasons = []
+                    if hit_relative:
+                        reasons.append(f"相对变化 {rel_change:+.2%}")
+                    if hit_absolute:
+                        reasons.append(f"绝对变化 {abs_change:+.2%}")
+                    if hit_volume:
+                        reasons.append(f"成交额增量 ${window_volume:,.0f}")
                     msg = "\n".join([
                         f"💰 Polymarket 成交异动: {label}",
                         f"事件：{label}",
@@ -299,14 +392,17 @@ class Monitor:
                         f"NO：{show_no:.2%}",
                         f"最新成交价（YES）：{trigger_yes_price:.2%}",
                         f"近5分钟相对变化：{rel_change:+.2%}",
-                        f"近5分钟绝对变化：{abs_change:+.4f}",
+                        f"近5分钟绝对变化：{abs_change:+.2%}",
                         f"近5分钟新增成交额：${window_volume:,.0f}",
+                        f"触发条件：{'；'.join(reasons)}",
                         f"时间：{now_local().strftime('%Y-%m-%d %H:%M:%S')}",
-                        f"链接：{item.get('url') or f'https://polymarket.com/zh/event/{item.get('slug')}' }",
+                        f"链接：{item.get('url') or ('https://polymarket.com/zh/event/' + str(item.get('slug') or ''))}",
                     ])
                     self.queue_alert(msg)
                     self.mark_alert(market_id, kind)
-                    append_log(f"alert queued for {market_id}")
+                    append_log(f"alert queued for {market_id} reasons={','.join(reasons)}")
+        self.check_slow_trend_alerts(market_id, item, trigger_yes_price, display_yes, display_no)
+        self.check_high_probability_alert(market_id, item, trigger_yes_price, display_yes, display_no)
         self.save_state()
 
     async def snapshot_refresher(self) -> None:
@@ -331,30 +427,30 @@ class Monitor:
                                 op = mm.get("outcomePrices")
                                 if isinstance(op, str):
                                     op = json.loads(op)
+                                new_volume24 = as_float(mm.get("volume24hr") or mm.get("volume24hrClob"), 0.0)
+                                item["last_volume24hr"] = new_volume24
+                                vol_snapshots = item.setdefault("volume_snapshots", [])
+                                vol_snapshots.append({"ts": now_local().isoformat(), "volume24hr": new_volume24})
+                                cutoff = now_local() - timedelta(minutes=10)
+                                vol_snapshots[:] = [x for x in vol_snapshots if datetime.fromisoformat(x["ts"].replace("Z", "+00:00")).astimezone() >= cutoff]
+                                target = now_local() - timedelta(seconds=WINDOW_SECONDS)
+                                base_vol = vol_snapshots[0]["volume24hr"] if vol_snapshots else new_volume24
+                                for snap in vol_snapshots:
+                                    ts = datetime.fromisoformat(snap["ts"].replace("Z", "+00:00")).astimezone()
+                                    if ts <= target:
+                                        base_vol = snap["volume24hr"]
+                                    else:
+                                        break
+                                item["volume_delta_5m"] = max(0.0, new_volume24 - base_vol)
+                                if isinstance(op, str):
+                                    op = json.loads(op)
                                 if isinstance(op, list) and len(op) >= 2:
                                     new_display_yes = as_float(op[0], 0.0)
                                     new_display_no = as_float(op[1], 0.0)
-                                    new_volume24 = as_float(mm.get("volume24hr") or mm.get("volume24hrClob"), 0.0)
                                     item["display_yes_price"] = new_display_yes
                                     item["display_no_price"] = new_display_no
                                     item["last_yes_price"] = new_display_yes
                                     item["last_no_price"] = new_display_no
-                                    # volume24hr 快照队列，用于计算 5 分钟差分
-                                    vol_snapshots = item.setdefault("volume_snapshots", [])
-                                    vol_snapshots.append({"ts": now_local().isoformat(), "volume24hr": new_volume24})
-                                    # 保留最近 10 分钟快照
-                                    cutoff = now_local() - timedelta(minutes=10)
-                                    vol_snapshots[:] = [x for x in vol_snapshots if datetime.fromisoformat(x["ts"].replace("Z", "+00:00")).astimezone() >= cutoff]
-                                    # 计算 5 分钟成交量差分
-                                    target = now_local() - timedelta(seconds=WINDOW_SECONDS)
-                                    base_vol = new_volume24
-                                    for snap in vol_snapshots:
-                                        ts = datetime.fromisoformat(snap["ts"].replace("Z", "+00:00")).astimezone()
-                                        if ts <= target:
-                                            base_vol = snap["volume24hr"]
-                                            break
-                                    item["volume_delta_5m"] = max(0.0, new_volume24 - base_vol)
-                                    item["last_volume24hr"] = new_volume24
                                 break
                     except Exception as e:
                         append_log(f"snapshot refresh failed for {market_id}: {e}")
@@ -378,7 +474,7 @@ class Monitor:
                     await asyncio.sleep(5)
                     continue
                 subscribed_ids = tuple(sorted(self.market_map.keys()))
-                async with websockets.connect(WS_URL, ping_interval=20, ping_timeout=20, proxy=None) as ws:
+                async with websockets.connect(WS_URL, ping_interval=20, ping_timeout=20, open_timeout=30, proxy=None) as ws:
                     sub = {
                         "assets_ids": list(subscribed_ids),
                         "type": "market",
