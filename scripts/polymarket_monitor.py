@@ -13,11 +13,15 @@ def main() -> None:
     mode = sys.argv[1] if len(sys.argv) > 1 else 'scan'
     if mode == 'scan':
         from polymarket_broadcast import pop_alerts
-        print(pop_alerts())
+        text = pop_alerts()
+        if text:
+            print(text)
         return
     if mode == 'summary':
         from polymarket_broadcast import make_summary
-        print(make_summary())
+        text = make_summary()
+        if text:
+            print(text)
         return
     raise SystemExit(f'unknown mode: {mode}')
 
