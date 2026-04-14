@@ -10,7 +10,8 @@ from typing import Any
 
 WORKSPACE = Path("/Users/zhangbeilong/.openclaw/workspace-polymarket-monitor")
 STATE_FILE = WORKSPACE / "poll_state.json"
-ALERT_OUTBOX = WORKSPACE / "alert_outbox.json"
+ALERT_OUTBOX = WORKSPACE / "alert_outbox.json"  # WhatsApp
+TELEGRAM_OUTBOX = WORKSPACE / "telegram_outbox.json"  # Telegram
 
 
 def now_local() -> datetime:
@@ -90,13 +91,15 @@ def format_volume_24h(history: list[dict[str, Any]]) -> str:
     return f"${total:,.0f}"
 
 
-def pop_alerts() -> str:
-    outbox = load_json(ALERT_OUTBOX, {"messages": []})
+def pop_alerts(channel: str = "whatsapp") -> str:
+    """Pop alerts for specified channel. channel='whatsapp' or 'telegram'."""
+    outbox_file = TELEGRAM_OUTBOX if channel == "telegram" else ALERT_OUTBOX
+    outbox = load_json(outbox_file, {"messages": []})
     msgs = outbox.get("messages", []) if isinstance(outbox, dict) else []
     if not msgs:
         return ""
     text = "\n\n".join(m.get("text", "") for m in msgs if m.get("text"))
-    save_json(ALERT_OUTBOX, {"messages": []})
+    save_json(outbox_file, {"messages": []})
     return text or ""
 
 

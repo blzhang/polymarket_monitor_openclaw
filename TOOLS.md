@@ -17,6 +17,7 @@
 
 ### 推送渠道
 - **WhatsApp**: 默认群组（需先链接账户）
+- **Telegram**: 同步推送到当前群组
 - **命令**: `openclaw channels login --channel whatsapp`
 
 ### WebSocket 端点
@@ -26,9 +27,18 @@
 ### 服务管理
 - **主进程**: `python3 scripts/polymarket_ws_daemon.py`
 - **看门狗**: `./scripts/ws_watchdog.sh`（cron 每分钟调用）
-- **兼容 cron 入口**: `python3 scripts/polymarket_monitor.py scan|summary`
+- **兼容 cron 入口**: `python3 scripts/polymarket_monitor.py scan|summary [whatsapp|telegram]`
 - **日志**: `monitor.log`
 - **PID 文件**: `monitor.pid`
+
+### Cron 配置示例
+```bash
+# WhatsApp 推送（每分钟）
+* * * * * cd /Users/zhangbeilong/.openclaw/workspace-polymarket-monitor && TEXT=$(python3 scripts/polymarket_monitor.py scan whatsapp) && [ -n "$TEXT" ] && openclaw send --channel whatsapp "$TEXT"
+
+# Telegram 推送（每分钟）
+* * * * * cd /Users/zhangbeilong/.openclaw/workspace-polymarket-monitor && TEXT=$(python3 scripts/polymarket_monitor.py scan telegram) && [ -n "$TEXT" ] && openclaw send --channel telegram "$TEXT"
+```
 
 ### 文件结构
 ```
@@ -37,11 +47,13 @@
 │   ├── polymarket_ws_daemon.py    # 常驻 WS 采集
 │   ├── polymarket_monitor.py      # cron 兼容入口
 │   ├── polymarket_broadcast.py    # outbox/summary 输出
+│   ├── telegram_push.sh           # Telegram 推送脚本
 │   └── ws_watchdog.sh             # 看门狗脚本
 ├── venv/                          # Python 虚拟环境
 ├── requirements.txt               # 依赖
 ├── poll_state.json                # 统一状态文件
-├── alert_outbox.json              # 异动播报 outbox
+├── alert_outbox.json              # WhatsApp 异动播报 outbox
+├── telegram_outbox.json           # Telegram 异动播报 outbox
 ├── monitor.log                    # 运行日志
 └── monitor.pid                    # 进程 ID
 ```

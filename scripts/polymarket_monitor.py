@@ -11,9 +11,11 @@ WORKSPACE = Path('/Users/zhangbeilong/.openclaw/workspace-polymarket-monitor')
 
 def main() -> None:
     mode = sys.argv[1] if len(sys.argv) > 1 else 'scan'
+    channel = sys.argv[2] if len(sys.argv) > 2 else 'whatsapp'
+    
     if mode == 'scan':
         from polymarket_broadcast import pop_alerts
-        text = pop_alerts()
+        text = pop_alerts(channel)
         if text:
             print(text)
         return

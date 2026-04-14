@@ -20,7 +20,8 @@ HTTP_EVENT_API = "https://gamma-api.polymarket.com/events?slug={slug}"
 WORKSPACE = Path("/Users/zhangbeilong/.openclaw/workspace-polymarket-monitor")
 WATCHLIST_FILE = WORKSPACE / "watchlist.json"
 STATE_FILE = WORKSPACE / "poll_state.json"
-ALERT_OUTBOX = WORKSPACE / "alert_outbox.json"
+ALERT_OUTBOX = WORKSPACE / "alert_outbox.json"  # WhatsApp
+TELEGRAM_OUTBOX = WORKSPACE / "telegram_outbox.json"  # Telegram
 SUMMARY_OUTBOX = WORKSPACE / "summary_outbox.json"
 PID_FILE = WORKSPACE / "monitor.pid"
 LOG_FILE = WORKSPACE / "monitor.log"
@@ -229,9 +230,16 @@ class Monitor:
         self.dedup[market_id] = time.time()
 
     def queue_alert(self, text: str) -> None:
-        outbox = load_json(ALERT_OUTBOX, {"messages": []})
-        outbox.setdefault("messages", []).append({"text": text, "ts": now_local().isoformat()})
-        save_json(ALERT_OUTBOX, outbox)
+        """Queue alert to both WhatsApp and Telegram outboxes."""
+        # WhatsApp outbox
+        whatsapp_outbox = load_json(ALERT_OUTBOX, {"messages": []})
+        whatsapp_outbox.setdefault("messages", []).append({"text": text, "ts": now_local().isoformat()})
+        save_json(ALERT_OUTBOX, whatsapp_outbox)
+        
+        # Telegram outbox
+        telegram_outbox = load_json(TELEGRAM_OUTBOX, {"messages": []})
+        telegram_outbox.setdefault("messages", []).append({"text": text, "ts": now_local().isoformat()})
+        save_json(TELEGRAM_OUTBOX, telegram_outbox)
 
     def check_slow_trend_alerts(self, market_id: str, item: dict[str, Any], trigger_yes_price: float, display_yes: Any, display_no: Any) -> None:
         history = item.get("history", [])

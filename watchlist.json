@@ -23,6 +23,12 @@
       "label": "美伊永久和平协议",
       "enabled": true,
       "expiresAt": "2026-07-01T00:00:00+08:00"
+    },
+    {
+      "event_id": "trump-announces-us-blockade-of-hormuz-lifted-by",
+      "label": "特朗普宣布美军封锁霍尔木兹何时解除",
+      "enabled": true,
+      "expiresAt": null
     }
   ]
 }
