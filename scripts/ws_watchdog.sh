@@ -14,5 +14,5 @@ if [[ -f "$PID_FILE" ]]; then
 fi
 
 cd "$WORKDIR"
-nohup "$WORKDIR/venv/bin/python" "$SCRIPT" >> "$LOG_FILE" 2>&1 &
+nohup python3 "$SCRIPT" >> "$LOG_FILE" 2>&1 &
 echo $! > "$PID_FILE"
