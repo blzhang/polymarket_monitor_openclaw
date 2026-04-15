@@ -104,6 +104,12 @@ def zh_label_for_market(question: str, slug: str) -> str:
     if q.startswith('Iran x Israel/US conflict ends by '):
         date_part = q.removeprefix('Iran x Israel/US conflict ends by ').rstrip('?')
         return f'伊朗 x 以色列/美国冲突是否在{date_part}前结束'
+    if q.startswith('Trump announces US blockade of Hormuz lifted by '):
+        date_part = q.removeprefix('Trump announces US blockade of Hormuz lifted by ').rstrip('?')
+        return f'特朗普宣布美军封锁霍尔木兹解除 ({date_part})'
+    if q.startswith('US-Iran permanent peace deal by '):
+        date_part = q.removeprefix('US-Iran permanent peace deal by ').rstrip('?')
+        return f'美伊永久和平协议达成 ({date_part})'
     return q or slug
 
 
@@ -137,19 +143,24 @@ def fetch_markets_for_slug(slug: str) -> list[dict[str, Any]]:
             elif isinstance(raw_token_ids, list):
                 token_ids = raw_token_ids
             market_title = m.get("question") or m.get("title") or title
-            # URL 使用事件 slug（event slug），不是市场 slug（market slug）
-            # 事件 slug 是传入的 slug 参数，市场 slug 带随机后缀
             # 从 market_title 提取日期，用于告警显示
             market_date = ""
             if "by " in market_title:
                 market_date = market_title.split("by ")[-1].rstrip("?").rstrip(" ")
+            # 优先使用市场自身的 slug 构造精确 URL
+            market_slug = m.get("slug") or m.get("marketSlug") or ""
+            if market_slug and market_slug != slug:
+                market_url = f'https://polymarket.com/zh/market/{market_slug}'
+            else:
+                market_url = f'https://polymarket.com/zh/event/{slug}'
             out.append({
                 "market_id": str(m.get("id") or m.get("conditionId") or ""),
                 "slug": slug,
+                "market_slug": market_slug,
                 "label": zh_label_for_market(market_title, slug),
                 "market_title": market_title,
                 "market_date": market_date,  # 如 "April 22, 2026"
-                "url": f'https://polymarket.com/zh/event/{slug}',
+                "url": market_url,
                 "token_ids": [str(x) for x in token_ids],
                 "yes_token_id": str(token_ids[0]) if len(token_ids) >= 1 else None,
                 "no_token_id": str(token_ids[1]) if len(token_ids) >= 2 else None,
@@ -223,6 +234,7 @@ class Monitor:
         min_age = timedelta(seconds=seconds_back * 0.8)
         max_age = timedelta(seconds=seconds_back * 1.2)
         chosen = None
+        chosen_ts = None
         for item in history:
             try:
                 ts = datetime.fromisoformat(item["ts"].replace("Z", "+00:00")).astimezone()
@@ -233,7 +245,11 @@ class Monitor:
                 return item  # 找到合适的数据点
             if ts <= target:
                 chosen = item  # 记录最后一个早于 target 的点
-        # 如果没有找到合适范围内的数据，返回 None（不计算）
+                chosen_ts = ts
+        # fallback：只允许最多 1.5 倍窗口时长以内的旧数据，超出则认为数据太旧不计算
+        if chosen and chosen_ts:
+            if (now_local() - chosen_ts) > timedelta(seconds=seconds_back * 1.5):
+                return None
         return chosen
 
     def can_alert(self, market_id: str, kind: str) -> bool:
@@ -333,13 +349,18 @@ class Monitor:
             try:
                 markets = fetch_markets_for_slug(slug)
                 for m in markets:
-                    m["label"] = label
+                    # 仅当子市场没有专属标签时才用 watchlist 事件级标签兜底
+                    # fetch_markets_for_slug 已经通过 zh_label_for_market 生成了含日期的子市场标签
+                    if not m.get("label") or m["label"] == slug:
+                        m["label"] = label
+                    m["event_label"] = label  # 保存事件级标签供调试
                     token_ids = m.get("token_ids", [])
                     for token_id in token_ids:
                         market_map[str(token_id)] = {**m, "token_id": str(token_id)}
             except Exception as e:
                 append_log(f"watchlist refresh failed for {slug}: {e}")
         changed = set(self.market_map.keys()) != set(market_map.keys())
+        # 更新 market_map 中每个 token 的 meta，保留 per-market label（含日期），不用 event label 覆盖
         self.market_map = market_map
         self.state["last_watchlist_refresh"] = now_local().isoformat()
         self.save_state()
@@ -536,7 +557,19 @@ class Monitor:
                                     market_id = str(change.get("asset_id") or "")
                                     if not market_id:
                                         continue
-                                    price = as_float(change.get("price") or change.get("best_bid") or change.get("best_ask"), 0.0)
+                                    # 用 best_bid/best_ask 中间价作为市场价，而非单笔订单价
+                                    # change.get("price") 是触发此事件的单笔订单价格，可能是任意限价单
+                                    best_bid = as_float(change.get("best_bid"), 0.0)
+                                    best_ask = as_float(change.get("best_ask"), 0.0)
+                                    if best_bid > 0 and best_ask > 0:
+                                        price = (best_bid + best_ask) / 2.0
+                                    elif best_bid > 0:
+                                        price = best_bid
+                                    elif best_ask > 0:
+                                        price = best_ask
+                                    else:
+                                        # 没有 bid/ask 信息时才 fallback 到订单价
+                                        price = as_float(change.get("price"), 0.0)
                                     if price <= 0:
                                         continue
                                     volume_delta = as_float(change.get("size") or 0.0)
@@ -546,7 +579,17 @@ class Monitor:
                             market_id = str(item_data.get("asset_id") or item_data.get("marketId") or item_data.get("market_id") or "")
                             if not market_id:
                                 continue
-                            price = as_float(item_data.get("price") or item_data.get("last_price") or item_data.get("lastTradePrice") or item_data.get("bestBid"), 0.0)
+                            # 同样优先用 best_bid/best_ask 中间价
+                            best_bid = as_float(item_data.get("best_bid") or item_data.get("bestBid"), 0.0)
+                            best_ask = as_float(item_data.get("best_ask") or item_data.get("bestAsk"), 0.0)
+                            if best_bid > 0 and best_ask > 0:
+                                price = (best_bid + best_ask) / 2.0
+                            elif best_bid > 0:
+                                price = best_bid
+                            elif best_ask > 0:
+                                price = best_ask
+                            else:
+                                price = as_float(item_data.get("price") or item_data.get("last_price") or item_data.get("lastTradePrice"), 0.0)
                             if price <= 0:
                                 continue
                             volume_delta = as_float(item_data.get("size") or item_data.get("volume") or item_data.get("amount"), 0.0)
