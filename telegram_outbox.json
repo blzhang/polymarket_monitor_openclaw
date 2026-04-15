@@ -1,12 +1,44 @@
 {
   "messages": [
     {
-      "text": "💰 Polymarket 成交异动: 美伊永久和平协议\n事件：美伊永久和平协议\nYES：52.50%\nNO：47.50%\n最新成交价（YES）：11.00%\n近5分钟相对变化：-80.00%\n近5分钟绝对变化：-44.00%\n近5分钟新增成交额：$20\n触发条件：相对变化 -80.00%；绝对变化 -44.00%\n时间：2026-04-15 13:00:03\n链接：https://polymarket.com/zh/event/us-x-iran-permanent-peace-deal-by",
-      "ts": "2026-04-15T13:00:03.882473+08:00"
+      "text": "💰 Polymarket 成交异动: 特朗普宣布美军封锁霍尔木兹何时解除\n事件：特朗普宣布美军封锁霍尔木兹何时解除\nYES：61.50%\nNO：38.50%\n最新成交价（YES）：62.00%\n近5分钟相对变化：+121.43%\n近5分钟绝对变化：+34.00%\n近5分钟新增成交额：$0\n触发条件：相对变化 +121.43%；绝对变化 +34.00%\n时间：2026-04-15 13:08:14\n链接：https://polymarket.com/zh/event/trump-announces-us-blockade-of-hormuz-lifted-by",
+      "ts": "2026-04-15T13:08:14.837872+08:00"
     },
     {
-      "text": "💰 Polymarket 成交异动: Iran x Israel/US conflict ends by...\n事件：Iran x Israel/US conflict ends by...\nYES：83.50%\nNO：16.50%\n最新成交价（YES）：85.00%\n近5分钟相对变化：+286.36%\n近5分钟绝对变化：+63.00%\n近5分钟新增成交额：$0\n触发条件：相对变化 +286.36%；绝对变化 +63.00%\n时间：2026-04-15 13:00:06\n链接：https://polymarket.com/zh/event/iran-x-israelus-conflict-ends-by",
-      "ts": "2026-04-15T13:00:06.932214+08:00"
+      "text": "💰 Polymarket 成交异动: 美伊永久和平协议\n事件：美伊永久和平协议\nYES：28.50%\nNO：71.50%\n最新成交价（YES）：26.00%\n近5分钟相对变化：-21.21%\n近5分钟绝对变化：-7.00%\n近5分钟新增成交额：$11,207\n触发条件：相对变化 -21.21%；绝对变化 -7.00%\n时间：2026-04-15 13:08:22\n链接：https://polymarket.com/zh/event/us-x-iran-permanent-peace-deal-by",
+      "ts": "2026-04-15T13:08:22.161997+08:00"
+    },
+    {
+      "text": "💰 Polymarket 成交异动: 美伊永久和平协议\n事件：美伊永久和平协议\nYES：67.00%\nNO：33.00%\n最新成交价（YES）：80.00%\n近5分钟相对变化：+23.08%\n近5分钟绝对变化：+15.00%\n近5分钟新增成交额：$392\n触发条件：相对变化 +23.08%；绝对变化 +15.00%\n时间：2026-04-15 13:08:24\n链接：https://polymarket.com/zh/event/us-x-iran-permanent-peace-deal-by",
+      "ts": "2026-04-15T13:08:24.284473+08:00"
+    },
+    {
+      "text": "💰 Polymarket 成交异动: 美伊永久和平协议\n事件：美伊永久和平协议\nYES：37.50%\nNO：62.50%\n最新成交价（YES）：12.00%\n近5分钟相对变化：-66.67%\n近5分钟绝对变化：-24.00%\n近5分钟新增成交额：$0\n触发条件：相对变化 -66.67%；绝对变化 -24.00%\n时间：2026-04-15 13:08:25\n链接：https://polymarket.com/zh/event/us-x-iran-permanent-peace-deal-by",
+      "ts": "2026-04-15T13:08:25.820735+08:00"
+    },
+    {
+      "text": "💰 Polymarket 成交异动: Iran x Israel/US conflict ends by...\n事件：Iran x Israel/US conflict ends by...\nYES：91.50%\nNO：8.50%\n最新成交价（YES）：98.00%\n近5分钟相对变化：+226.67%\n近5分钟绝对变化：+68.00%\n近5分钟新增成交额：$0\n触发条件：相对变化 +226.67%；绝对变化 +68.00%\n时间：2026-04-15 13:08:28\n链接：https://polymarket.com/zh/event/iran-x-israelus-conflict-ends-by",
+      "ts": "2026-04-15T13:08:28.447578+08:00"
+    },
+    {
+      "text": "💰 Polymarket 成交异动: 特朗普宣布美军封锁霍尔木兹何时解除\n事件：特朗普宣布美军封锁霍尔木兹何时解除\nYES：83.50%\nNO：16.50%\n最新成交价（YES）：27.00%\n近5分钟相对变化：+58.82%\n近5分钟绝对变化：+10.00%\n近5分钟新增成交额：$0\n触发条件：相对变化 +58.82%；绝对变化 +10.00%\n时间：2026-04-15 13:08:30\n链接：https://polymarket.com/zh/event/trump-announces-us-blockade-of-hormuz-lifted-by",
+      "ts": "2026-04-15T13:08:30.432268+08:00"
+    },
+    {
+      "text": "🚨 Polymarket 高概率阈值: 特朗普宣布美军封锁霍尔木兹何时解除\n事件：特朗普宣布美军封锁霍尔木兹何时解除\nYES：83.50%\nNO：16.50%\n当前成交价（YES）：94.00%\n触发条件：YES 概率达到或超过 90%\n时间：2026-04-15 13:08:31\n链接：https://polymarket.com/zh/event/trump-announces-us-blockade-of-hormuz-lifted-by",
+      "ts": "2026-04-15T13:08:31.380547+08:00"
+    },
+    {
+      "text": "🚨 Polymarket 高概率阈值: 特朗普宣布美军封锁霍尔木兹何时解除\n事件：特朗普宣布美军封锁霍尔木兹何时解除\nYES：83.50%\nNO：16.50%\n当前成交价（YES）：95.00%\n触发条件：YES 概率达到或超过 90%\n时间：2026-04-15 13:08:34\n链接：https://polymarket.com/zh/event/trump-announces-us-blockade-of-hormuz-lifted-by",
+      "ts": "2026-04-15T13:08:34.197881+08:00"
+    },
+    {
+      "text": "💰 Polymarket 成交异动: 特朗普宣布美军封锁霍尔木兹何时解除\n事件：特朗普宣布美军封锁霍尔木兹何时解除\nYES：3.35%\nNO：96.65%\n最新成交价（YES）：0.20%\n近5分钟相对变化：-88.24%\n近5分钟绝对变化：-1.50%\n近5分钟新增成交额：$0\n触发条件：相对变化 -88.24%\n时间：2026-04-15 13:08:41\n链接：https://polymarket.com/zh/event/trump-announces-us-blockade-of-hormuz-lifted-by",
+      "ts": "2026-04-15T13:08:41.233398+08:00"
+    },
+    {
+      "text": "📉 Polymarket 缓慢下行: 特朗普宣布美军封锁霍尔木兹何时解除\n事件：特朗普宣布美军封锁霍尔木兹何时解除\nYES：3.35%\nNO：96.65%\n当前成交价（YES）：0.20%\n对比窗口：30分钟\n窗口起点价格：0.30%\n窗口相对变化：-33.33%\n窗口绝对变化：-0.10%\n触发条件：30分钟累计变化达到 -33.33%\n时间：2026-04-15 13:08:41\n链接：https://polymarket.com/zh/event/trump-announces-us-blockade-of-hormuz-lifted-by",
+      "ts": "2026-04-15T13:08:41.239542+08:00"
     }
   ]
 }

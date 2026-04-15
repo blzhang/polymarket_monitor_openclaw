@@ -349,6 +349,10 @@ class Monitor:
         item = self.ensure_market_state(market_id, meta)
         yes_token_id = str(item.get("yes_token_id") or "")
         no_token_id = str(item.get("no_token_id") or "")
+        
+        # 调试日志：检查 token 匹配
+        token_type = "YES" if str(token_id) == yes_token_id else ("NO" if str(token_id) == no_token_id else "UNKNOWN")
+        append_log(f"process_trade: market={market_id} token={token_id[:20]}... price={price:.4f} type={token_type}")
 
         display_yes = item.get("display_yes_price")
         display_no = item.get("display_no_price")
@@ -465,11 +469,11 @@ class Monitor:
                                 if isinstance(op, list) and len(op) >= 2:
                                     new_display_yes = as_float(op[0], 0.0)
                                     new_display_no = as_float(op[1], 0.0)
+                                    # 只更新 display 价格用于展示，不覆盖 last_trade 价格
+                                    # last_yes_price 由 WebSocket trade 更新，更准确
                                     item["display_yes_price"] = new_display_yes
                                     item["display_no_price"] = new_display_no
-                                    item["last_yes_price"] = new_display_yes
-                                    item["last_no_price"] = new_display_no
-                                    # snapshot 更新价格后，检查高概率阈值和缓慢趋势
+                                    # snapshot 更新价格后，检查高概率阈值和缓慢趋势（使用 display 价格）
                                     self.check_high_probability_alert(market_id, item, new_display_yes, new_display_yes, new_display_no)
                                     self.check_slow_trend_alerts(market_id, item, new_display_yes, new_display_yes, new_display_no)
                                 break
