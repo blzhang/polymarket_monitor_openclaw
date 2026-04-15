@@ -34,10 +34,10 @@ WINDOW_SECONDS = 300
 SLOW_TREND_WINDOWS = [1800, 3600, 21600]
 SLOW_TREND_RULES = [
     # (时间窗口秒数，变化阈值)
-    # 提高阈值，减少过于敏感的告警
-    (1800, 0.15),   # 30 分钟：15%（原 5%）
-    (3600, 0.25),   # 1 小时：25%（原 10%）
-    (21600, 0.40),  # 6 小时：40%（原 20%）
+    # 2026-04-16: 方案 A - 提高阈值减少噪音
+    (1800, 0.25),   # 30 分钟：25%
+    (3600, 0.40),   # 1 小时：40%
+    (21600, 0.60),  # 6 小时：60%
 ]
 HIGH_PROB_THRESHOLD = 0.90
 HIGH_PROB_REARM_THRESHOLD = 0.85
@@ -258,6 +258,15 @@ class Monitor:
         # 去重按 market_id 统一去，不按方向；避免价格小幅波动导致连发
         last = self.dedup.get(market_id, 0)
         return time.time() - last >= DEDUP_SECONDS
+    
+    def can_slow_trend_alert(self, market_id: str) -> bool:
+        """缓慢趋势告警专用去重：同一市场 30 分钟内只推送 1 次（方案 B）"""
+        last = self.dedup.get(f"slow_{market_id}", 0)
+        return time.time() - last >= 1800  # 30 分钟
+    
+    def mark_slow_trend_alert(self, market_id: str) -> None:
+        """标记缓慢趋势告警已发送"""
+        self.dedup[f"slow_{market_id}"] = time.time()
 
     def mark_alert(self, market_id: str, kind: str) -> None:
         self.dedup[market_id] = time.time()
@@ -275,6 +284,9 @@ class Monitor:
         save_json(TELEGRAM_OUTBOX, telegram_outbox)
 
     def check_slow_trend_alerts(self, market_id: str, item: dict[str, Any], trigger_yes_price: float, display_yes: Any, display_no: Any) -> None:
+        # 方案 B：市场级去重检查
+        if not self.can_slow_trend_alert(market_id):
+            return
         history = item.get("history", [])
         if not history:
             return
