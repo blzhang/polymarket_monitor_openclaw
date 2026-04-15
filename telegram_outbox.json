@@ -1,16 +1,16 @@
 {
   "messages": [
     {
-      "text": "📈 Polymarket 缓慢上行: 特朗普宣布美军封锁霍尔木兹何时解除\n事件：特朗普宣布美军封锁霍尔木兹何时解除\nYES：28.50%\nNO：71.50%\n当前成交价（YES）：30.00%\n对比窗口：1小时\n窗口起点价格：7.00%\n窗口相对变化：+328.57%\n窗口绝对变化：+23.00%\n触发条件：1小时累计变化达到 +328.57%\n时间：2026-04-15 13:15:01\n链接：https://polymarket.com/zh/event/trump-announces-us-blockade-of-hormuz-lifted-by",
-      "ts": "2026-04-15T13:15:01.922001+08:00"
+      "text": "💰 Polymarket 成交异动: 美伊永久和平协议\n事件：美伊永久和平协议\nYES：28.00%\nNO：72.00%\n最新成交价（YES）：26.00%\n近5分钟相对变化：-10.34%\n近5分钟绝对变化：-3.00%\n近5分钟新增成交额：$0\n触发条件：相对变化 -10.34%\n时间：2026-04-15 14:02:35\n链接：https://polymarket.com/zh/event/us-x-iran-permanent-peace-deal-by",
+      "ts": "2026-04-15T14:02:35.819049+08:00"
     },
     {
-      "text": "💰 Polymarket 成交异动: Iran x Israel/US conflict ends by...\n事件：Iran x Israel/US conflict ends by...\nYES：83.50%\nNO：16.50%\n最新成交价（YES）：69.00%\n近5分钟相对变化：-18.82%\n近5分钟绝对变化：-16.00%\n近5分钟新增成交额：$859\n触发条件：相对变化 -18.82%；绝对变化 -16.00%\n时间：2026-04-15 13:15:22\n链接：https://polymarket.com/zh/event/iran-x-israelus-conflict-ends-by",
-      "ts": "2026-04-15T13:15:22.638890+08:00"
+      "text": "💰 Polymarket 成交异动: Iran x Israel/US conflict ends by...\n事件：Iran x Israel/US conflict ends by...\nYES：91.50%\nNO：8.50%\n最新成交价（YES）：89.00%\n近5分钟相对变化：+641.67%\n近5分钟绝对变化：+77.00%\n近5分钟新增成交额：$0\n触发条件：相对变化 +641.67%；绝对变化 +77.00%\n时间：2026-04-15 14:02:40\n链接：https://polymarket.com/zh/event/iran-x-israelus-conflict-ends-by",
+      "ts": "2026-04-15T14:02:40.637250+08:00"
     },
     {
-      "text": "💰 Polymarket 成交异动: 美伊永久和平协议\n事件：美伊永久和平协议\nYES：53.50%\nNO：46.50%\n最新成交价（YES）：1.00%\n近5分钟相对变化：-98.00%\n近5分钟绝对变化：-49.00%\n近5分钟新增成交额：$200\n触发条件：相对变化 -98.00%；绝对变化 -49.00%\n时间：2026-04-15 13:15:31\n链接：https://polymarket.com/zh/event/us-x-iran-permanent-peace-deal-by",
-      "ts": "2026-04-15T13:15:31.958116+08:00"
+      "text": "📈 Polymarket 缓慢上行: Iran x Israel/US conflict ends by...\n事件：Iran x Israel/US conflict ends by...\nYES：91.50%\nNO：8.50%\n当前成交价（YES）：89.00%\n对比窗口：1小时\n窗口起点价格：6.00%\n窗口相对变化：+1383.33%\n窗口绝对变化：+83.00%\n触发条件：1小时累计变化达到 +1383.33%\n时间：2026-04-15 14:02:40\n链接：https://polymarket.com/zh/event/iran-x-israelus-conflict-ends-by",
+      "ts": "2026-04-15T14:02:40.701759+08:00"
     }
   ]
 }
