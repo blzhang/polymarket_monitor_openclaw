@@ -137,12 +137,14 @@ def fetch_markets_for_slug(slug: str) -> list[dict[str, Any]]:
             elif isinstance(raw_token_ids, list):
                 token_ids = raw_token_ids
             market_title = m.get("question") or m.get("title") or title
+            # URL 使用事件 slug（event slug），不是市场 slug（market slug）
+            # 事件 slug 是传入的 slug 参数，市场 slug 带随机后缀
             out.append({
                 "market_id": str(m.get("id") or m.get("conditionId") or ""),
                 "slug": slug,
                 "label": zh_label_for_market(market_title, slug),
                 "market_title": market_title,
-                "url": f'https://polymarket.com/zh/event/{m.get("slug") or slug}',
+                "url": f'https://polymarket.com/zh/event/{slug}',
                 "token_ids": [str(x) for x in token_ids],
                 "yes_token_id": str(token_ids[0]) if len(token_ids) >= 1 else None,
                 "no_token_id": str(token_ids[1]) if len(token_ids) >= 2 else None,
