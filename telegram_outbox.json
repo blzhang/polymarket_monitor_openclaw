@@ -1,1 +1,36 @@
-{"messages": []}
+{
+  "messages": [
+    {
+      "text": "💰 Polymarket 成交异动: 美伊永久和平协议\n事件：美伊永久和平协议\nYES：23.50%\nNO：76.50%\n最新成交价（YES）：12.00%\n近5分钟相对变化：-53.85%\n近5分钟绝对变化：-14.00%\n近5分钟新增成交额：$0\n触发条件：相对变化 -53.85%；绝对变化 -14.00%\n时间：2026-04-15 11:04:21\n链接：https://polymarket.com/zh/event/us-x-iran-permanent-peace-deal-by-april-22-2026",
+      "ts": "2026-04-15T11:04:21.838341+08:00"
+    },
+    {
+      "text": "💰 Polymarket 成交异动: 霍尔木兹海峡航运是否在4月底前恢复正常\n事件：霍尔木兹海峡航运是否在4月底前恢复正常\nYES：23.50%\nNO：76.50%\n最新成交价（YES）：49.00%\n近5分钟相对变化：+122.73%\n近5分钟绝对变化：+27.00%\n近5分钟新增成交额：$0\n触发条件：相对变化 +122.73%；绝对变化 +27.00%\n时间：2026-04-15 11:04:26\n链接：https://polymarket.com/zh/event/strait-of-hormuz-traffic-returns-to-normal-by-april-30",
+      "ts": "2026-04-15T11:04:26.718342+08:00"
+    },
+    {
+      "text": "💰 Polymarket 成交异动: Iran x Israel/US conflict ends by...\n事件：Iran x Israel/US conflict ends by...\nYES：83.50%\nNO：16.50%\n最新成交价（YES）：82.00%\n近5分钟相对变化：-11.83%\n近5分钟绝对变化：-11.00%\n近5分钟新增成交额：$0\n触发条件：相对变化 -11.83%；绝对变化 -11.00%\n时间：2026-04-15 11:04:30\n链接：https://polymarket.com/zh/event/iran-x-israelus-conflict-ends-by-may-15-562-372-916-721-496",
+      "ts": "2026-04-15T11:04:30.627460+08:00"
+    },
+    {
+      "text": "💰 Polymarket 成交异动: Iran x Israel/US conflict ends by...\n事件：Iran x Israel/US conflict ends by...\nYES：96.65%\nNO：3.35%\n最新成交价（YES）：96.60%\n近5分钟相对变化：+141.50%\n近5分钟绝对变化：+56.60%\n近5分钟新增成交额：$524\n触发条件：相对变化 +141.50%；绝对变化 +56.60%\n时间：2026-04-15 11:04:37\n链接：https://polymarket.com/zh/event/iran-x-israelus-conflict-ends-by-december-31-788-548",
+      "ts": "2026-04-15T11:04:37.140617+08:00"
+    },
+    {
+      "text": "🚨 Polymarket 高概率阈值: Iran x Israel/US conflict ends by...\n事件：Iran x Israel/US conflict ends by...\nYES：96.65%\nNO：3.35%\n当前成交价（YES）：96.60%\n触发条件：YES 概率达到或超过 90%\n时间：2026-04-15 11:04:37\n链接：https://polymarket.com/zh/event/iran-x-israelus-conflict-ends-by-december-31-788-548",
+      "ts": "2026-04-15T11:04:37.162644+08:00"
+    },
+    {
+      "text": "🚨 Polymarket 高概率阈值: 霍尔木兹海峡航运是否在5月底前恢复正常\n事件：霍尔木兹海峡航运是否在5月底前恢复正常\nYES：57.00%\nNO：43.00%\n当前成交价（YES）：93.00%\n触发条件：YES 概率达到或超过 90%\n时间：2026-04-15 11:04:42\n链接：https://polymarket.com/zh/event/strait-of-hormuz-traffic-returns-to-normal-by-end-of-may",
+      "ts": "2026-04-15T11:04:42.827749+08:00"
+    },
+    {
+      "text": "🚨 Polymarket 高概率阈值: 霍尔木兹海峡航运是否在5月底前恢复正常\n事件：霍尔木兹海峡航运是否在5月底前恢复正常\nYES：57.00%\nNO：43.00%\n当前成交价（YES）：97.00%\n触发条件：YES 概率达到或超过 90%\n时间：2026-04-15 11:04:44\n链接：https://polymarket.com/zh/event/strait-of-hormuz-traffic-returns-to-normal-by-end-of-may",
+      "ts": "2026-04-15T11:04:44.697441+08:00"
+    },
+    {
+      "text": "🚨 Polymarket 高概率阈值: Iran x Israel/US conflict ends by...\n事件：Iran x Israel/US conflict ends by...\nYES：83.50%\nNO：16.50%\n当前成交价（YES）：91.00%\n触发条件：YES 概率达到或超过 90%\n时间：2026-04-15 11:04:51\n链接：https://polymarket.com/zh/event/iran-x-israelus-conflict-ends-by-may-15-562-372-916-721-496",
+      "ts": "2026-04-15T11:04:51.271864+08:00"
+    }
+  ]
+}
