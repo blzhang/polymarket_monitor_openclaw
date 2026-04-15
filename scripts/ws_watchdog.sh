@@ -16,3 +16,9 @@ fi
 cd "$WORKDIR"
 nohup python3 "$SCRIPT" >> "$LOG_FILE" 2>&1 &
 echo $! > "$PID_FILE"
+
+# 推送 Telegram 积压告警
+TEXT=$(python3 scripts/polymarket_monitor.py scan telegram 2>/dev/null)
+if [ -n "$TEXT" ]; then
+    echo "[Telegram] $TEXT"
+fi
