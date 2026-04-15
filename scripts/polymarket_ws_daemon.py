@@ -423,7 +423,8 @@ class Monitor:
             hit_absolute = abs(abs_change) >= ABSOLUTE_THRESHOLD
             hit_volume = window_volume >= MIN_VOLUME_DELTA
             # 成交异动告警必须有成交量，避免 WebSocket 价格波动误报
-            if (hit_relative or hit_absolute) and hit_volume:
+            # 只看绝对变化，相对变化在低价时太敏感（如 4%→5%=+25%）
+            if hit_absolute and hit_volume:
                 kind = "up" if abs_change > 0 else "down" if abs_change < 0 else "flat"
                 if self.can_alert(market_id, kind):
                     label = item.get("label") or item.get("market_title") or market_id
