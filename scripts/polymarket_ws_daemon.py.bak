@@ -412,11 +412,9 @@ class Monitor:
                         reasons.append(f"绝对变化 {abs_change:+.2%}")
                     if hit_volume:
                         reasons.append(f"成交额增量 ${window_volume:,.0f}")
-                    market_date = item.get("market_date", "")
-                    date_line = f"\n到期：{market_date}" if market_date else ""
                     msg = "\n".join([
                         f"💰 Polymarket 成交异动: {label}",
-                        f"事件：{label}{date_line}",
+                        f"事件：{label}",
                         f"YES：{show_yes:.2%}",
                         f"NO：{show_no:.2%}",
                         f"最新成交价（YES）：{trigger_yes_price:.2%}",
