@@ -1,8 +1,20 @@
 {
   "messages": [
     {
-      "text": "💰 Polymarket 成交异动: 特朗普宣布美军封锁霍尔木兹何时解除\n事件：特朗普宣布美军封锁霍尔木兹何时解除\nYES：59.50%\nNO：40.50%\n最新成交价（YES）：9.00%\n近5分钟相对变化：-89.53%\n近5分钟绝对变化：-77.00%\n近5分钟新增成交额：$0\n触发条件：相对变化 -89.53%；绝对变化 -77.00%\n时间：2026-04-15 11:27:39\n链接：https://polymarket.com/zh/event/will-donald-trump-announce-that-the-united-states-blockade-of-the-strait-of-hormuz-has-been-lifted-by-april-30-2026",
-      "ts": "2026-04-15T11:27:39.001967+08:00"
+      "text": "💰 Polymarket 成交异动: 特朗普宣布美军封锁霍尔木兹何时解除\n事件：特朗普宣布美军封锁霍尔木兹何时解除\nYES：9.50%\nNO：90.50%\n最新成交价（YES）：10.00%\n近5分钟相对变化：-85.92%\n近5分钟绝对变化：-61.00%\n近5分钟新增成交额：$49\n触发条件：相对变化 -85.92%；绝对变化 -61.00%\n时间：2026-04-15 11:37:07\n链接：https://polymarket.com/zh/event/will-donald-trump-announce-that-the-united-states-blockade-of-the-strait-of-hormuz-has-been-lifted-by-april-17-2026",
+      "ts": "2026-04-15T11:37:07.852881+08:00"
+    },
+    {
+      "text": "💰 Polymarket 成交异动: 美伊永久和平协议\n事件：美伊永久和平协议\nYES：22.50%\nNO：77.50%\n最新成交价（YES）：25.00%\n近5分钟相对变化：+108.33%\n近5分钟绝对变化：+13.00%\n近5分钟新增成交额：$0\n触发条件：相对变化 +108.33%；绝对变化 +13.00%\n时间：2026-04-15 11:37:12\n链接：https://polymarket.com/zh/event/us-x-iran-permanent-peace-deal-by-april-22-2026",
+      "ts": "2026-04-15T11:37:12.056252+08:00"
+    },
+    {
+      "text": "💰 Polymarket 成交异动: 霍尔木兹海峡航运是否在4月底前恢复正常\n事件：霍尔木兹海峡航运是否在4月底前恢复正常\nYES：23.50%\nNO：76.50%\n最新成交价（YES）：19.00%\n近5分钟相对变化：-20.83%\n近5分钟绝对变化：-5.00%\n近5分钟新增成交额：$0\n触发条件：相对变化 -20.83%；绝对变化 -5.00%\n时间：2026-04-15 11:37:14\n链接：https://polymarket.com/zh/event/strait-of-hormuz-traffic-returns-to-normal-by-april-30",
+      "ts": "2026-04-15T11:37:14.979022+08:00"
+    },
+    {
+      "text": "📈 Polymarket 缓慢上行: 霍尔木兹海峡航运是否在4月底前恢复正常\n事件：霍尔木兹海峡航运是否在4月底前恢复正常\nYES：23.50%\nNO：76.50%\n当前成交价（YES）：19.00%\n对比窗口：1小时\n窗口起点价格：11.00%\n窗口相对变化：+72.73%\n窗口绝对变化：+8.00%\n触发条件：1小时累计变化达到 +72.73%\n时间：2026-04-15 11:37:15\n链接：https://polymarket.com/zh/event/strait-of-hormuz-traffic-returns-to-normal-by-april-30",
+      "ts": "2026-04-15T11:37:15.002897+08:00"
     }
   ]
 }
