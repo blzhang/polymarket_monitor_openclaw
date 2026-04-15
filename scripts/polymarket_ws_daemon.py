@@ -282,6 +282,9 @@ class Monitor:
         label = item.get("label") or item.get("market_title") or market_id
         show_yes = as_float(display_yes, trigger_yes_price)
         show_no = as_float(display_no, max(0.0, 1.0 - show_yes))
+
+        # 先收集所有满足条件且未被去重的窗口
+        triggered: list[tuple[int, float, float, float, str]] = []
         for seconds_back, threshold in SLOW_TREND_RULES:
             baseline = self.get_baseline(history, seconds_back)
             if not baseline:
@@ -297,25 +300,36 @@ class Monitor:
             last_ts = as_float(trend_dedup.get(dedup_key), 0.0)
             if time.time() - last_ts < seconds_back:
                 continue
-            direction_emoji = "📈" if rel_change > 0 else "📉"
-            direction_text = "缓慢上行" if rel_change > 0 else "缓慢下行"
-            msg = "\n".join([
-                f"{direction_emoji} Polymarket {direction_text}: {label}",
-                f"事件：{label}",
-                f"YES：{show_yes:.2%}",
-                f"NO：{show_no:.2%}",
-                f"当前成交价（YES）：{trigger_yes_price:.2%}",
-                f"对比窗口：{window_label(seconds_back)}",
-                f"窗口起点价格：{base_price:.2%}",
-                f"窗口相对变化：{rel_change:+.2%}",
-                f"窗口绝对变化：{abs_change:+.2%}",
-                f"触发条件：{window_label(seconds_back)}累计变化达到 {rel_change:+.2%}",
-                f"时间：{now_local().strftime('%Y-%m-%d %H:%M:%S')}",
-                f"链接：{item.get('url') or ('https://polymarket.com/zh/event/' + str(item.get('slug') or ''))}",
-            ])
-            self.queue_alert(msg)
-            trend_dedup[dedup_key] = time.time()
-            append_log(f"slow trend alert queued for {market_id} window={seconds_back} rel={rel_change:+.4f}")
+            triggered.append((seconds_back, base_price, abs_change, rel_change, dedup_key))
+
+        if not triggered:
+            return
+
+        # 多个窗口同时满足时只发最长窗口的告警，避免重复消息
+        # 所有触发窗口的 dedup key 都标记，防止短窗口随后补发
+        seconds_back, base_price, abs_change, rel_change, _ = triggered[-1]
+        now_ts = time.time()
+        for entry in triggered:
+            trend_dedup[entry[4]] = now_ts
+
+        direction_emoji = "📈" if rel_change > 0 else "📉"
+        direction_text = "缓慢上行" if rel_change > 0 else "缓慢下行"
+        msg = "\n".join([
+            f"{direction_emoji} Polymarket {direction_text}: {label}",
+            f"事件：{label}",
+            f"YES：{show_yes:.2%}",
+            f"NO：{show_no:.2%}",
+            f"当前成交价（YES）：{trigger_yes_price:.2%}",
+            f"对比窗口：{window_label(seconds_back)}",
+            f"窗口起点价格：{base_price:.2%}",
+            f"窗口相对变化：{rel_change:+.2%}",
+            f"窗口绝对变化：{abs_change:+.2%}",
+            f"触发条件：{window_label(seconds_back)}累计变化达到 {rel_change:+.2%}",
+            f"时间：{now_local().strftime('%Y-%m-%d %H:%M:%S')}",
+            f"链接：{item.get('url') or ('https://polymarket.com/zh/event/' + str(item.get('slug') or ''))}",
+        ])
+        self.queue_alert(msg)
+        append_log(f"slow trend alert queued for {market_id} window={seconds_back} rel={rel_change:+.4f} (suppressed {len(triggered)-1} shorter windows)")
 
     def check_high_probability_alert(self, market_id: str, item: dict[str, Any], trigger_yes_price: float, display_yes: Any, display_no: Any) -> None:
         label = item.get("label") or item.get("market_title") or market_id
