@@ -3,6 +3,19 @@
 export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 WORKDIR="/Users/zhangbeilong/.openclaw/workspace-polymarket-monitor"
+
+# 读取本地配置（不上传到 git）
+CONFIG_FILE="$WORKDIR/config_local.json"
+if [ -f "$CONFIG_FILE" ]; then
+    WHATSAPP_TARGET=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('whatsapp_target',''))" 2>/dev/null)
+    TELEGRAM_TARGET=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('telegram_target',''))" 2>/dev/null)
+    TELEGRAM_THREAD=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('telegram_thread_id',''))" 2>/dev/null)
+else
+    WHATSAPP_TARGET=""
+    TELEGRAM_TARGET="-1003692750762"
+    TELEGRAM_THREAD="2346"
+fi
+
 PID_FILE="$WORKDIR/monitor.pid"
 SCRIPT="$WORKDIR/scripts/polymarket_ws_daemon.py"
 LOG_FILE="$WORKDIR/monitor.log"
@@ -23,16 +36,19 @@ else
   echo $! > "$PID_FILE"
 fi
 
-# 推送 Telegram 积压告警（论坛需要 thread-id）
+# 推送 Telegram 积压告警
 cd "$WORKDIR"
 TELEGRAM_TEXT=$(python3 scripts/polymarket_monitor.py scan telegram 2>/dev/null || true)
-if [ -n "$TELEGRAM_TEXT" ]; then
-    /opt/homebrew/bin/openclaw message send --channel telegram --target "-1003692750762" --thread-id "2346" --message "$TELEGRAM_TEXT" >> "$LOG_FILE" 2>&1 || true
+if [ -n "$TELEGRAM_TEXT" ] && [ -n "$TELEGRAM_TARGET" ]; then
+    if [ -n "$TELEGRAM_THREAD" ]; then
+        /opt/homebrew/bin/openclaw message send --channel telegram --target "$TELEGRAM_TARGET" --thread-id "$TELEGRAM_THREAD" --message "$TELEGRAM_TEXT" >> "$LOG_FILE" 2>&1 || true
+    else
+        /opt/homebrew/bin/openclaw message send --channel telegram --target "$TELEGRAM_TARGET" --message "$TELEGRAM_TEXT" >> "$LOG_FILE" 2>&1 || true
+    fi
 fi
 
-# 推送 WhatsApp 积压告警（需要配置 target 号码）
-# WHATSAPP_TARGET="+8613800138000"  # ← 在这里配置你的 WhatsApp 号码
+# 推送 WhatsApp 积压告警
 WHATSAPP_TEXT=$(python3 scripts/polymarket_monitor.py scan whatsapp 2>/dev/null || true)
-if [ -n "$WHATSAPP_TEXT" ] && [ -n "${WHATSAPP_TARGET:-}" ]; then
+if [ -n "$WHATSAPP_TEXT" ] && [ -n "$WHATSAPP_TARGET" ]; then
     /opt/homebrew/bin/openclaw message send --channel whatsapp --target "$WHATSAPP_TARGET" --message "$WHATSAPP_TEXT" >> "$LOG_FILE" 2>&1 || true
 fi

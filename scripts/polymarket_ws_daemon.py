@@ -33,9 +33,11 @@ DEDUP_SECONDS = 60
 WINDOW_SECONDS = 300
 SLOW_TREND_WINDOWS = [1800, 3600, 21600]
 SLOW_TREND_RULES = [
-    (1800, 0.05),
-    (3600, 0.10),
-    (21600, 0.20),
+    # (时间窗口秒数，变化阈值)
+    # 提高阈值，减少过于敏感的告警
+    (1800, 0.15),   # 30 分钟：15%（原 5%）
+    (3600, 0.25),   # 1 小时：25%（原 10%）
+    (21600, 0.40),  # 6 小时：40%（原 20%）
 ]
 HIGH_PROB_THRESHOLD = 0.90
 HIGH_PROB_REARM_THRESHOLD = 0.85
