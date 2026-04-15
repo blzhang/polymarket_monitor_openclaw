@@ -210,18 +210,26 @@ class Monitor:
         return out
 
     def get_baseline(self, history: list[dict[str, Any]], seconds_back: int) -> dict[str, Any] | None:
+        """获取 baseline 数据点，允许 ±20% 时间误差。如果找不到合适数据点返回 None。"""
         if not history:
             return None
         target = now_local() - timedelta(seconds=seconds_back)
+        # 允许 20% 的时间误差，避免用太老的数据
+        min_age = timedelta(seconds=seconds_back * 0.8)
+        max_age = timedelta(seconds=seconds_back * 1.2)
         chosen = None
         for item in history:
             try:
                 ts = datetime.fromisoformat(item["ts"].replace("Z", "+00:00")).astimezone()
             except Exception:
                 continue
+            age = now_local() - ts
+            if min_age <= age <= max_age:
+                return item  # 找到合适的数据点
             if ts <= target:
-                chosen = item
-        return chosen or history[0]
+                chosen = item  # 记录最后一个早于 target 的点
+        # 如果没有找到合适范围内的数据，返回 None（不计算）
+        return chosen
 
     def can_alert(self, market_id: str, kind: str) -> bool:
         # 去重按 market_id 统一去，不按方向；避免价格小幅波动导致连发
