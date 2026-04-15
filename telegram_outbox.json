@@ -1,16 +1,3 @@
 {
-  "messages": [
-    {
-      "text": "💰 Polymarket 成交异动: 美伊永久和平协议\n事件：美伊永久和平协议\nYES：28.00%\nNO：72.00%\n最新成交价（YES）：26.00%\n近5分钟相对变化：-10.34%\n近5分钟绝对变化：-3.00%\n近5分钟新增成交额：$0\n触发条件：相对变化 -10.34%\n时间：2026-04-15 14:02:35\n链接：https://polymarket.com/zh/event/us-x-iran-permanent-peace-deal-by",
-      "ts": "2026-04-15T14:02:35.819049+08:00"
-    },
-    {
-      "text": "💰 Polymarket 成交异动: Iran x Israel/US conflict ends by...\n事件：Iran x Israel/US conflict ends by...\nYES：91.50%\nNO：8.50%\n最新成交价（YES）：89.00%\n近5分钟相对变化：+641.67%\n近5分钟绝对变化：+77.00%\n近5分钟新增成交额：$0\n触发条件：相对变化 +641.67%；绝对变化 +77.00%\n时间：2026-04-15 14:02:40\n链接：https://polymarket.com/zh/event/iran-x-israelus-conflict-ends-by",
-      "ts": "2026-04-15T14:02:40.637250+08:00"
-    },
-    {
-      "text": "📈 Polymarket 缓慢上行: Iran x Israel/US conflict ends by...\n事件：Iran x Israel/US conflict ends by...\nYES：91.50%\nNO：8.50%\n当前成交价（YES）：89.00%\n对比窗口：1小时\n窗口起点价格：6.00%\n窗口相对变化：+1383.33%\n窗口绝对变化：+83.00%\n触发条件：1小时累计变化达到 +1383.33%\n时间：2026-04-15 14:02:40\n链接：https://polymarket.com/zh/event/iran-x-israelus-conflict-ends-by",
-      "ts": "2026-04-15T14:02:40.701759+08:00"
-    }
-  ]
+  "messages": []
 }

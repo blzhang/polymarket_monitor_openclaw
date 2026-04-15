@@ -30,8 +30,9 @@ if [ -n "$TELEGRAM_TEXT" ]; then
     /opt/homebrew/bin/openclaw message send --channel telegram --target "-1003692750762" --thread-id "2346" --message "$TELEGRAM_TEXT" >> "$LOG_FILE" 2>&1 || true
 fi
 
-# 推送 WhatsApp 积压告警
+# 推送 WhatsApp 积压告警（需要配置 target 号码）
+# WHATSAPP_TARGET="+8613800138000"  # ← 在这里配置你的 WhatsApp 号码
 WHATSAPP_TEXT=$(python3 scripts/polymarket_monitor.py scan whatsapp 2>/dev/null || true)
-if [ -n "$WHATSAPP_TEXT" ]; then
-    /opt/homebrew/bin/openclaw message send --channel whatsapp --message "$WHATSAPP_TEXT" >> "$LOG_FILE" 2>&1 || true
+if [ -n "$WHATSAPP_TEXT" ] && [ -n "${WHATSAPP_TARGET:-}" ]; then
+    /opt/homebrew/bin/openclaw message send --channel whatsapp --target "$WHATSAPP_TARGET" --message "$WHATSAPP_TEXT" >> "$LOG_FILE" 2>&1 || true
 fi
