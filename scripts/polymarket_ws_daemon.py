@@ -459,6 +459,9 @@ class Monitor:
                                     item["display_no_price"] = new_display_no
                                     item["last_yes_price"] = new_display_yes
                                     item["last_no_price"] = new_display_no
+                                    # snapshot 更新价格后，检查高概率阈值和缓慢趋势
+                                    self.check_high_probability_alert(market_id, item, new_display_yes, new_display_yes, new_display_no)
+                                    self.check_slow_trend_alerts(market_id, item, new_display_yes, new_display_yes, new_display_no)
                                 break
                     except Exception as e:
                         append_log(f"snapshot refresh failed for {market_id}: {e}")
