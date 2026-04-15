@@ -1,3 +1,7 @@
+# 本地配置（包含敏感信息，不上传）
+config_local.json
+*.local.json
+
 # Python
 __pycache__/
 *.py[cod]
@@ -7,28 +11,17 @@ __pycache__/
 venv/
 ENV/
 env/
-*.egg-info/
-dist/
-build/
 
-# State files
+# 运行状态
+*.pid
+*.log
 poll_state.json
 alert_outbox.json
+telegram_outbox.json
 summary_outbox.json
-price_cache.json
-*.pid
+watchlist.json
 
-# Logs
-*.log
-
-# OpenClaw internal
-.openclaw/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# OS
-.DS_Store
+# 临时文件
+*.bak
+tmp/
+.tmp/
