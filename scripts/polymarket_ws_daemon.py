@@ -41,6 +41,8 @@ SLOW_TREND_RULES = [
 ]
 HIGH_PROB_THRESHOLD = 0.90
 HIGH_PROB_REARM_THRESHOLD = 0.85
+# YES < 2% 或 YES > 98% 视为市场已定局，不再发快异动/慢趋势告警（价格噪音无意义）
+FLAT_MARKET_THRESHOLD = 0.02
 MAX_HISTORY_HOURS = 30
 REBUILD_WATCHLIST_SECONDS = 300
 
@@ -284,6 +286,9 @@ class Monitor:
         save_json(TELEGRAM_OUTBOX, telegram_outbox)
 
     def check_slow_trend_alerts(self, market_id: str, item: dict[str, Any], trigger_yes_price: float, display_yes: Any, display_no: Any) -> None:
+        # 市场已定局（YES < 2% 或 YES > 98%），价格微小波动无意义，静默
+        if trigger_yes_price < FLAT_MARKET_THRESHOLD or trigger_yes_price > (1.0 - FLAT_MARKET_THRESHOLD):
+            return
         # 方案 B：市场级去重检查
         if not self.can_slow_trend_alert(market_id):
             return
@@ -342,8 +347,7 @@ class Monitor:
         ])
         self.queue_alert(msg)
         self.mark_slow_trend_alert(market_id)  # 方案 B：标记市场级告警已发送
-
-            append_log(f"slow trend alert queued for {market_id} window={seconds_back} rel={rel_change:+.4f} (suppressed {len(triggered)-1} shorter windows)")
+        append_log(f"slow trend alert queued for {market_id} window={seconds_back} rel={rel_change:+.4f} (suppressed {len(triggered)-1} shorter windows)")
 
     def check_high_probability_alert(self, market_id: str, item: dict[str, Any], trigger_yes_price: float, display_yes: Any, display_no: Any) -> None:
         label = item.get("label") or item.get("market_title") or market_id
@@ -430,6 +434,8 @@ class Monitor:
             return
         if trigger_yes_price <= 0:
             return
+        # 市场已定局（YES < 2% 或 YES > 98%），仍记录历史但不触发告警
+        market_decided = trigger_yes_price < FLAT_MARKET_THRESHOLD or trigger_yes_price > (1.0 - FLAT_MARKET_THRESHOLD)
 
         # WS size 字段不是单笔 USD 成交，而是累计量或放大值；这里只记价格，成交量改用 HTTP snapshot 差分
         history = self.prune_history(item.get("history", []))
@@ -452,7 +458,7 @@ class Monitor:
             hit_volume = window_volume >= MIN_VOLUME_DELTA
             # 成交异动告警必须有成交量，避免 WebSocket 价格波动误报
             # 只看绝对变化，相对变化在低价时太敏感（如 4%→5%=+25%）
-            if hit_absolute and hit_volume:
+            if hit_absolute and hit_volume and not market_decided:
                 kind = "up" if abs_change > 0 else "down" if abs_change < 0 else "flat"
                 if self.can_alert(market_id, kind):
                     label = item.get("label") or item.get("market_title") or market_id
