@@ -214,7 +214,9 @@ def fetch_markets_for_slug(slug: str) -> list[dict[str, Any]]:
                 "label":       zh_label_for_market(market_title, slug),
                 "market_title": market_title,
                 "market_date": market_date,
-                "end_date":    m.get("endDate") or "",   # 存入 end_date 供 days_to_expiry 使用
+                # TODO: API 的 endDate 字段可能错误，建议从 market_title 解析
+            # 示例：API 返回 2026-04-30，但实际市场是 "by April 17, 2026?"
+            "end_date":    m.get("endDate") or "",   # 存入 end_date 供 days_to_expiry 使用
                 "url":         market_url,
                 "token_ids":   [str(x) for x in token_ids],
                 "yes_token_id": str(token_ids[0]) if len(token_ids) >= 1 else None,
