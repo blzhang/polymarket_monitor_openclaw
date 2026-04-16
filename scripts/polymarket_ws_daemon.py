@@ -341,7 +341,8 @@ class Monitor:
             f"链接：{item.get('url') or ('https://polymarket.com/zh/event/' + str(item.get('slug') or ''))}",
         ])
         self.queue_alert(msg)
-        append_log(f"slow trend alert queued for {market_id} window={seconds_back} rel={rel_change:+.4f} (suppressed {len(triggered)-1} shorter windows)")
+            self.mark_slow_trend_alert(market_id)  # 方案 B：标记市场级告警已发送
+            append_log(f"slow trend alert queued for {market_id} window={seconds_back} rel={rel_change:+.4f} (suppressed {len(triggered)-1} shorter windows)")
 
     def check_high_probability_alert(self, market_id: str, item: dict[str, Any], trigger_yes_price: float, display_yes: Any, display_no: Any) -> None:
         label = item.get("label") or item.get("market_title") or market_id
