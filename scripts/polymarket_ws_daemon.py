@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
 import time
 from collections import defaultdict
@@ -41,10 +42,22 @@ SLOW_TREND_RULES = [
 ]
 HIGH_PROB_THRESHOLD = 0.90
 HIGH_PROB_REARM_THRESHOLD = 0.85
-# YES < 2% 或 YES > 98% 视为市场已定局，不再发快异动/慢趋势告警（价格噪音无意义）
-FLAT_MARKET_THRESHOLD = 0.02
+# 信息熵阈值：H(p) = -p·log₂(p) - (1-p)·log₂(1-p)
+# H < 0.25 对应 YES < ~4% 或 YES > ~96%，市场不确定性已极低，告警无意义
+ENTROPY_THRESHOLD = 0.25
+# 慢趋势告警的绝对变化下限：无论相对变化多大，绝对变化 < 2% 不发告警
+SLOW_TREND_MIN_ABS = 0.02
 MAX_HISTORY_HOURS = 30
 REBUILD_WATCHLIST_SECONDS = 300
+
+
+def market_entropy(yes_price: float) -> float:
+    """计算市场香农熵（比特），衡量剩余不确定性。
+    H = -p·log₂(p) - (1-p)·log₂(1-p)，范围 [0, 1]，越低越确定。
+    H < 0.25 约对应 YES < 4% 或 YES > 96%。
+    """
+    p = max(1e-9, min(1 - 1e-9, yes_price))  # 防止 log(0)
+    return -(p * math.log2(p) + (1 - p) * math.log2(1 - p))
 
 
 def now_local() -> datetime:
@@ -286,10 +299,10 @@ class Monitor:
         save_json(TELEGRAM_OUTBOX, telegram_outbox)
 
     def check_slow_trend_alerts(self, market_id: str, item: dict[str, Any], trigger_yes_price: float, display_yes: Any, display_no: Any) -> None:
-        # 市场已定局（YES < 2% 或 YES > 98%），价格微小波动无意义，静默
-        if trigger_yes_price < FLAT_MARKET_THRESHOLD or trigger_yes_price > (1.0 - FLAT_MARKET_THRESHOLD):
+        # 信息熵过滤：市场不确定性太低（接近确定结果），告警无意义
+        if market_entropy(trigger_yes_price) < ENTROPY_THRESHOLD:
             return
-        # 方案 B：市场级去重检查
+        # 市场级去重：同一市场 30 分钟内只推 1 次慢趋势
         if not self.can_slow_trend_alert(market_id):
             return
         history = item.get("history", [])
@@ -312,6 +325,9 @@ class Monitor:
             abs_change = trigger_yes_price - base_price
             rel_change = abs_change / base_price
             if abs(rel_change) < threshold:
+                continue
+            # 绝对变化下限：< 2% 无论相对变化多大都不发（解决低价区 3%→4%=+33% 误报）
+            if abs(abs_change) < SLOW_TREND_MIN_ABS:
                 continue
             dedup_key = f"{seconds_back}:{'up' if rel_change > 0 else 'down'}"
             last_ts = as_float(trend_dedup.get(dedup_key), 0.0)
@@ -434,8 +450,8 @@ class Monitor:
             return
         if trigger_yes_price <= 0:
             return
-        # 市场已定局（YES < 2% 或 YES > 98%），仍记录历史但不触发告警
-        market_decided = trigger_yes_price < FLAT_MARKET_THRESHOLD or trigger_yes_price > (1.0 - FLAT_MARKET_THRESHOLD)
+        # 信息熵过滤：不确定性过低的市场仍记录历史但不触发快异动告警
+        market_decided = market_entropy(trigger_yes_price) < ENTROPY_THRESHOLD
 
         # WS size 字段不是单笔 USD 成交，而是累计量或放大值；这里只记价格，成交量改用 HTTP snapshot 差分
         history = self.prune_history(item.get("history", []))
