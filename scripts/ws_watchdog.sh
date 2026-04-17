@@ -3,13 +3,13 @@
 export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 WORKDIR="/Users/zhangbeilong/.openclaw/workspace-polymarket-monitor"
+CONFIG_FILE="$WORKDIR/config_local.json"
 
 # 读取本地配置（不上传到 git）
-CONFIG_FILE="$WORKDIR/config_local.json"
 if [ -f "$CONFIG_FILE" ]; then
-    WHATSAPP_TARGET=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('whatsapp_target',''))" 2>/dev/null)
-    TELEGRAM_TARGET=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('telegram_target',''))" 2>/dev/null)
-    TELEGRAM_THREAD=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('telegram_thread_id',''))" 2>/dev/null)
+    WHATSAPP_TARGET=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('whatsapp_target',''))")
+    TELEGRAM_TARGET=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('telegram_target',''))")
+    TELEGRAM_THREAD=$(python3 -c "import json; print(json.load(open('$CONFIG_FILE')).get('telegram_thread_id',''))")
 else
     WHATSAPP_TARGET=""
     TELEGRAM_TARGET="-1003692750762"
